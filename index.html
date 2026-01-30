@@ -211,6 +211,14 @@
 
         .shake { animation: shake 0.2s ease-in-out 0s 2; border-color: var(--error) !important; background-color: #fef2f2 !important; }
         .correct-flash { animation: successFlash 0.5s ease-out; }
+
+        /* Invisible iframe for printing */
+        #print-frame {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border: none;
+        }
     </style>
 </head>
 <body>
@@ -298,6 +306,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Hidden iframe used for generating the print dialog -->
+    <iframe id="print-frame"></iframe>
 
     <script>
         const VOCAB = [
@@ -550,16 +561,66 @@
             document.getElementById('progressBar').style.width = `${percent}%`;
         }
 
+        /**
+         * Enhanced Printing Logic for Mobile/Android
+         * Uses a hidden iframe to bypass popup blockers and ensure stability
+         */
         function printMistakes() {
             if (mistakes.size === 0) return;
-            const printWin = window.open('', '_blank');
+            
+            const frame = document.getElementById('print-frame');
+            const frameDoc = frame.contentWindow.document;
+            
             let tableRows = '';
             mistakes.forEach(idx => {
                 const word = VOCAB[idx];
-                tableRows += `<tr><td style="border: 1px solid #ddd; padding: 12px; font-weight: bold;">${word.ru}</td><td style="border: 1px solid #ddd; padding: 12px;">${word.en}</td><td style="border: 1px solid #ddd; padding: 12px; font-style: italic;">${word.notes || ''}</td></tr>`;
+                tableRows += `
+                    <tr>
+                        <td style="border: 1px solid #ddd; padding: 12px; font-weight: bold; font-size: 1.1rem;">${word.ru}</td>
+                        <td style="border: 1px solid #ddd; padding: 12px;">${word.en}</td>
+                        <td style="border: 1px solid #ddd; padding: 12px; font-style: italic; font-size: 0.85rem; color: #666;">${word.notes || ''}</td>
+                    </tr>`;
             });
-            printWin.document.write(`<html><head><title>Review List</title><style>body { font-family: sans-serif; padding: 40px; } table { width: 100%; border-collapse: collapse; }</style></head><body><h1>Review List</h1><table>${tableRows}</table><script>window.onload = function() { window.print(); window.close(); }<\/script></body></html>`);
-            printWin.document.close();
+
+            const content = `
+                <html>
+                    <head>
+                        <title>Review List - Ruslan Russian</title>
+                        <style>
+                            body { font-family: -apple-system, sans-serif; padding: 20px; color: #333; }
+                            h1 { color: #2563eb; font-size: 1.5rem; border-bottom: 2px solid #2563eb; padding-bottom: 10px; }
+                            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                            th { background: #f1f5f9; text-align: left; padding: 12px; border: 1px solid #ddd; font-size: 0.9rem; }
+                            .date { float: right; font-size: 0.8rem; color: #999; }
+                        </style>
+                    </head>
+                    <body>
+                        <span class="date">${new Date().toLocaleDateString()}</span>
+                        <h1>Vocab Review List</h1>
+                        <p>Practice these words from Lesson 2.</p>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Russian</th>
+                                    <th>English</th>
+                                    <th>Grammar/Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>${tableRows}</tbody>
+                        </table>
+                    </body>
+                </html>
+            `;
+
+            frameDoc.open();
+            frameDoc.write(content);
+            frameDoc.close();
+
+            // Small timeout to allow content to render before firing print
+            setTimeout(() => {
+                frame.contentWindow.focus();
+                frame.contentWindow.print();
+            }, 500);
         }
 
         // Virtual Keyboard Generator
