@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruslan Russian Vocab Trainer (Offline Version)</title>
+    <style>
+        /* Base Styles - Replacing Tailwind for Offline Use */
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Header & Progress */
+        header { text-align: center; }
+        h1 { margin: 0; color: #0f172a; }
+        .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-top: 4px; }
+        
+        .progress-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            font-size: 0.8rem;
+        }
+        .progress-bar-bg {
+            width: 70%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 10px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* Flashcard Logic */
+        .card-wrapper {
+            perspective: 1000px;
+            height: 250px;
+            width: 100%;
+        }
+        .flashcard-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.4s ease;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+        .flipped { transform: rotateY(180deg); }
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+            background: #f0f7ff;
+        }
+
+        /* Buttons & Inputs */
+        button.action-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: white;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        button.primary-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+        }
+        button.primary-btn:hover { background: var(--primary-hover); }
+
+        input.text-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.25rem;
+            text-align: center;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-sizing: border-box;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        input.text-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+
+        /* Keyboard */
+        .keyboard {
+            background: #f1f5f9;
+            padding: 10px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .kb-row { display: flex; justify-content: center; gap: 4px; }
+        .key {
+            width: 32px;
+            height: 40px;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .key:active { transform: scale(0.95); background: #f8fafc; }
+        .key.delete { width: 50px; background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+
+        /* Mistakes List Styles */
+        .mistake-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .mistake-text { display: flex; flex-direction: column; }
+        .mistake-ru { font-weight: bold; color: var(--primary); }
+        .mistake-en { font-size: 0.85rem; color: var(--text-muted); }
+
+        /* Helpers */
+        .hidden { display: none; }
+        .mt-20 { margin-top: 20px; }
+        .text-center { text-align: center; }
+        .ru-text { font-size: 2.2rem; color: var(--primary); font-weight: bold; margin-bottom: 10px; }
+        .en-text { font-size: 1.8rem; color: #334155; margin-bottom: 10px; }
+        
+        /* Animations */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        @keyframes successFlash {
+            0% { border-color: var(--border); background-color: white; }
+            50% { border-color: var(--success); background-color: #f0fdf4; transform: scale(1.02); }
+            100% { border-color: var(--border); background-color: white; transform: scale(1); }
+        }
+
+        .shake { animation: shake 0.2s ease-in-out 0s 2; border-color: var(--error) !important; background-color: #fef2f2 !important; }
+        .correct-flash { animation: successFlash 0.5s ease-out; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Ruslan Russian Trainer</h1>
+            <p class="subtitle">Offline Edition - Lesson 2</p>
+            <div class="progress-container">
+                <span id="progressText">Progress: 0%</span>
+                <div class="progress-bar-bg">
+                    <div id="progressBar" class="progress-bar-fill"></div>
+                </div>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button onclick="switchTab('study')" id="tab-study" class="tab-btn active">Study</button>
+            <button onclick="switchTab('quiz')" id="tab-quiz" class="tab-btn">Quiz</button>
+            <button onclick="switchTab('writing')" id="tab-writing" class="tab-btn">Writing</button>
+            <button onclick="switchTab('mistakes')" id="tab-mistakes" class="tab-btn">Mistakes <span id="mistake-count"></span></button>
+        </div>
+
+        <!-- STUDY -->
+        <div id="view-study">
+            <div class="card-wrapper">
+                <div id="flashcard" class="flashcard-inner" onclick="toggleFlip()">
+                    <div class="card-face">
+                        <div id="card-ru" class="ru-text">...</div>
+                        <div id="card-type" style="text-transform: uppercase; font-size: 0.7rem; color: #94a3b8; letter-spacing: 1px;"></div>
+                        <div style="margin-top: 20px; font-size: 0.7rem; color: #cbd5e1;">Click to flip</div>
+                    </div>
+                    <div class="card-face card-back">
+                        <div id="card-en" class="en-text">...</div>
+                        <div id="card-note" style="font-size: 0.8rem; font-style: italic; color: #d97706; background: white; padding: 4px 12px; border-radius: 20px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="progress-container mt-20">
+                <button class="action-btn" onclick="prevWord()">Previous</button>
+                <button class="action-btn primary-btn" onclick="nextWord()">Next Word</button>
+            </div>
+        </div>
+
+        <!-- QUIZ -->
+        <div id="view-quiz" class="hidden">
+            <div style="background: white; padding: 30px; border-radius: 16px; border: 1px solid var(--border); text-align: center;">
+                <div id="quiz-ru" class="ru-text" style="margin-bottom: 30px;">...</div>
+                <div id="quiz-options" style="display: grid; grid-template-columns: 1fr; gap: 10px;"></div>
+                <div id="quiz-feedback" style="margin-top: 15px; height: 20px; font-weight: bold;"></div>
+            </div>
+        </div>
+
+        <!-- WRITING -->
+        <div id="view-writing" class="hidden">
+            <div style="background: white; padding: 25px; border-radius: 16px; border: 1px solid var(--border);">
+                <div class="text-center" style="margin-bottom: 20px;">
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Translate to Russian:</div>
+                    <div id="write-en" style="font-size: 1.5rem; font-weight: bold;">...</div>
+                </div>
+                <input type="text" id="write-input" class="text-input" placeholder="Type here...">
+                <div style="display: flex; gap: 10px; margin: 20px 0;">
+                    <button onclick="checkWriting()" class="action-btn primary-btn" style="flex: 2;">Check</button>
+                    <button onclick="showHint()" class="action-btn" style="flex: 1;">Hint</button>
+                </div>
+                <div id="kybd" class="keyboard"></div>
+            </div>
+        </div>
+
+        <!-- MISTAKES VIEW -->
+        <div id="view-mistakes" class="hidden">
+            <div style="background: white; padding: 20px; border-radius: 16px; border: 1px solid var(--border);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2 style="margin: 0; font-size: 1.2rem;">Words to Review</h2>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="printMistakes()" id="print-btn" class="action-btn" style="font-size: 0.75rem;">Print List</button>
+                        <button onclick="clearMistakes()" class="action-btn" style="font-size: 0.75rem; color: var(--error);">Clear All</button>
+                    </div>
+                </div>
+                <div id="mistakes-list">
+                    <!-- Mistakes injected here -->
+                </div>
+                <div id="mistakes-empty" class="text-center" style="padding: 40px 0; color: var(--text-muted);">
+                    🎉 No mistakes yet! Complete a Quiz or Writing session to track progress.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const VOCAB = [
+            { ru: "работник", en: "worker", type: "noun" },
+            { ru: "почта", en: "the post", type: "noun" },
+            { ru: "конверт", en: "envelope", type: "noun" },
+            { ru: "желать", en: "to wish (someone something)", notes: "+ genitive", type: "verb", full: "желать / по-" },
+            { ru: "счастье", en: "happiness", type: "noun" },
+            { ru: "здоровье", en: "health", type: "noun" },
+            { ru: "другой", en: "other", type: "adj" },
+            { ru: "некрасивый", en: "ugly", type: "adj" },
+            { ru: "выбирать", en: "to choose", type: "verb", full: "выбирать / выбрать" },
+            { ru: "получать", en: "to receive", type: "verb", full: "получать / получить" },
+            { ru: "марка", en: "a stamp", type: "noun" },
+            { ru: "до востребования", en: "for collection", type: "phrase" },
+            { ru: "посылать", en: "to send", type: "verb", full: "посылать / послать" },
+            { ru: "письмо", en: "letter", type: "noun" },
+            { ru: "пугать", en: "to frighten", type: "verb", full: "пугать / испугать" },
+            { ru: "знакомиться", en: "to get acquainted", type: "verb", full: "знакомиться / по-" },
+            { ru: "покупать", en: "to buy", type: "verb", full: "покупать / купить" },
+            { ru: "менять", en: "to change", type: "verb", full: "менять / по-" },
+            { ru: "открытка", en: "postcard", type: "noun" },
+            { ru: "обмен", en: "exchange", type: "noun" },
+            { ru: "вид", en: "view", type: "noun" },
+            { ru: "валюта", en: "currency", type: "noun" },
+            { ru: "фунт", en: "a pound", type: "noun" },
+            { ru: "посылка", en: "parcel", type: "noun" },
+            { ru: "прохожий", en: "passer-by (m.)", type: "noun" },
+            { ru: "пенсия", en: "pension", type: "noun" },
+            { ru: "прохожая", en: "passer-by (f.)", type: "noun" },
+            { ru: "бандероль", en: "printed matter", notes: "feminine", type: "noun" },
+            { ru: "просто", en: "simple", type: "adv" },
+            { ru: "угол", en: "corner", type: "noun" },
+            { ru: "десятый", en: "the tenth", type: "numeral" },
+            { ru: "район", en: "region / district", type: "noun" },
+            { ru: "окно", en: "window", type: "noun" },
+            { ru: "пункт", en: "point / station", type: "noun" },
+            { ru: "также", en: "also", type: "adv" },
+            { ru: "ближайший", en: "nearest", type: "adj" },
+            { ru: "телеграмма", en: "telegram", type: "noun" },
+            { ru: "около", en: "near to", notes: "+ genitive", type: "prep" },
+            { ru: "смс", en: "text message", type: "noun" },
+            { ru: "родитель", en: "parent", type: "noun" },
+            { ru: "смартфон", en: "smart phone", type: "noun" },
+            { ru: "банковский", en: "bank (adj.)", type: "adj" },
+            { ru: "поздравлять", en: "to congratulate", type: "verb", full: "поздравлять / поздравить" },
+            { ru: "рядом", en: "close by", type: "adv" },
+            { ru: "банкомат", en: "cash point / ATM", type: "noun" },
+            { ru: "юбилей", en: "anniversary", type: "noun" },
+            { ru: "выходить в интернет", en: "to go online", type: "phrase" },
+            { ru: "находиться", en: "to be situated", type: "verb" },
+            { ru: "обменный", en: "exchange (adj.)", type: "adj" },
+            { ru: "снимать", en: "to take (money)", type: "verb", full: "снимать / снять" },
+            { ru: "дорого", en: "expensive", type: "adv" },
+            { ru: "правильно", en: "correct", type: "adv" },
+            { ru: "нужен", en: "need", type: "adj" },
+            { ru: "слово", en: "a word", type: "noun" },
+            { ru: "писать", en: "to write", type: "verb", full: "писать / написать" },
+            { ru: "онлайн", en: "online", type: "adv" }
+        ];
+
+        let currentIndex = 0;
+        let score = 0;
+        let mistakes = new Set();
+
+        function switchTab(tab) {
+            ['study', 'quiz', 'writing', 'mistakes'].forEach(t => {
+                document.getElementById(`view-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).classList.remove('active');
+            });
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            
+            if (tab === 'mistakes') {
+                renderMistakes();
+            } else {
+                renderCurrent(true); 
+            }
+        }
+
+        function renderCurrent(forceResetFlip = false) {
+            const word = VOCAB[currentIndex];
+            const card = document.getElementById('flashcard');
+            
+            if (forceResetFlip || card.classList.contains('flipped')) {
+                card.classList.remove('flipped');
+                setTimeout(() => updateCardText(word), 150);
+            } else {
+                updateCardText(word);
+            }
+
+            // Quiz logic update
+            document.getElementById('quiz-ru').innerText = word.full || word.ru;
+            const options = [word.en];
+            while(options.length < 4) {
+                const rand = VOCAB[Math.floor(Math.random()*VOCAB.length)].en;
+                if(!options.includes(rand)) options.push(rand);
+            }
+            options.sort(() => Math.random() - 0.5);
+            const optContainer = document.getElementById('quiz-options');
+            optContainer.innerHTML = '';
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "action-btn";
+                btn.style.padding = "15px";
+                btn.innerText = opt;
+                btn.onclick = () => checkQuiz(opt, word.en, btn);
+                optContainer.appendChild(btn);
+            });
+            document.getElementById('quiz-feedback').innerText = '';
+
+            // Writing logic update
+            document.getElementById('write-en').innerText = word.en;
+            document.getElementById('write-input').value = '';
+            document.getElementById('write-input').classList.remove('shake', 'correct-flash');
+        }
+
+        function updateCardText(word) {
+            document.getElementById('card-ru').innerText = word.full || word.ru;
+            document.getElementById('card-en').innerText = word.en;
+            document.getElementById('card-type').innerText = word.type;
+            const noteEl = document.getElementById('card-note');
+            if (word.notes) {
+                noteEl.innerText = word.notes;
+                noteEl.style.display = 'inline-block';
+            } else {
+                noteEl.style.display = 'none';
+            }
+        }
+
+        function toggleFlip() { 
+            document.getElementById('flashcard').classList.toggle('flipped'); 
+        }
+
+        function nextWord() { 
+            currentIndex = (currentIndex + 1) % VOCAB.length; 
+            renderCurrent(); 
+        }
+
+        function prevWord() { 
+            currentIndex = (currentIndex - 1 + VOCAB.length) % VOCAB.length; 
+            renderCurrent(); 
+        }
+
+        function checkQuiz(selected, correct, btn) {
+            const feedback = document.getElementById('quiz-feedback');
+            if (selected === correct) {
+                btn.classList.add('correct-flash');
+                feedback.innerText = "Correct! 🎉";
+                feedback.style.color = 'var(--success)';
+                updateProgress();
+                setTimeout(nextWord, 600);
+            } else {
+                btn.classList.add('shake');
+                feedback.innerText = "Try again!";
+                feedback.style.color = 'var(--error)';
+                addMistake(currentIndex);
+                setTimeout(() => btn.classList.remove('shake'), 400);
+            }
+        }
+
+        function checkWriting() {
+            const field = document.getElementById('write-input');
+            const input = field.value.trim().toLowerCase();
+            const word = VOCAB[currentIndex];
+            const correct = word.ru.toLowerCase();
+
+            if (input === correct) {
+                field.classList.remove('shake');
+                field.classList.add('correct-flash');
+                updateProgress();
+                setTimeout(() => {
+                    field.classList.remove('correct-flash');
+                    nextWord();
+                }, 600);
+            } else {
+                field.classList.add('shake');
+                addMistake(currentIndex);
+                setTimeout(() => field.classList.remove('shake'), 400);
+            }
+        }
+
+        function addMistake(index) {
+            mistakes.add(index);
+            updateMistakeBadge();
+        }
+
+        function updateMistakeBadge() {
+            const badge = document.getElementById('mistake-count');
+            const count = mistakes.size;
+            badge.innerText = count > 0 ? `(${count})` : '';
+            document.getElementById('print-btn').style.display = count > 0 ? 'inline-block' : 'none';
+        }
+
+        function renderMistakes() {
+            const list = document.getElementById('mistakes-list');
+            const empty = document.getElementById('mistakes-empty');
+            list.innerHTML = '';
+            
+            if (mistakes.size === 0) {
+                empty.classList.remove('hidden');
+                document.getElementById('print-btn').style.display = 'none';
+                return;
+            }
+            
+            empty.classList.add('hidden');
+            document.getElementById('print-btn').style.display = 'inline-block';
+            
+            mistakes.forEach(idx => {
+                const word = VOCAB[idx];
+                const item = document.createElement('div');
+                item.className = 'mistake-item';
+                item.innerHTML = `
+                    <div class="mistake-text">
+                        <span class="mistake-ru">${word.ru}</span>
+                        <span class="mistake-en">${word.en}</span>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="action-btn" style="padding: 5px 10px; font-size: 0.75rem;" onclick="jumpToWord(${idx})">Review</button>
+                        <button class="action-btn" style="padding: 5px 10px; font-size: 0.75rem; border-color: var(--success); color: var(--success);" onclick="removeMistake(${idx})">✓</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function removeMistake(idx) {
+            mistakes.delete(idx);
+            updateMistakeBadge();
+            renderMistakes();
+        }
+
+        function clearMistakes() {
+            mistakes.clear();
+            updateMistakeBadge();
+            renderMistakes();
+        }
+
+        function jumpToWord(idx) {
+            currentIndex = idx;
+            switchTab('study');
+        }
+
+        function showHint() { document.getElementById('write-input').value = VOCAB[currentIndex].ru; }
+
+        function updateProgress() {
+            score++;
+            const percent = Math.min(100, Math.round((score / VOCAB.length) * 100));
+            document.getElementById('progressText').innerText = `Progress: ${percent}%`;
+            document.getElementById('progressBar').style.width = `${percent}%`;
+        }
+
+        function printMistakes() {
+            if (mistakes.size === 0) return;
+            const printWin = window.open('', '_blank');
+            let tableRows = '';
+            mistakes.forEach(idx => {
+                const word = VOCAB[idx];
+                tableRows += `<tr><td style="border: 1px solid #ddd; padding: 12px; font-weight: bold;">${word.ru}</td><td style="border: 1px solid #ddd; padding: 12px;">${word.en}</td><td style="border: 1px solid #ddd; padding: 12px; font-style: italic;">${word.notes || ''}</td></tr>`;
+            });
+            printWin.document.write(`<html><head><title>Review List</title><style>body { font-family: sans-serif; padding: 40px; } table { width: 100%; border-collapse: collapse; }</style></head><body><h1>Review List</h1><table>${tableRows}</table><script>window.onload = function() { window.print(); window.close(); }<\/script></body></html>`);
+            printWin.document.close();
+        }
+
+        // Virtual Keyboard Generator
+        const kbLayout = ["йцукенгшщзхъ", "фывапролджэ", "ячсмитьбю"];
+        const kbContainer = document.getElementById('kybd');
+        kbLayout.forEach((row, i) => {
+            const rowDiv = document.createElement('div');
+            rowDiv.className = "kb-row";
+            row.split('').forEach(char => {
+                const btn = document.createElement('button');
+                btn.className = "key";
+                btn.innerText = char;
+                btn.onclick = () => {
+                    document.getElementById('write-input').value += char;
+                    document.getElementById('write-input').focus();
+                };
+                rowDiv.appendChild(btn);
+            });
+            if (i === 2) {
+                const del = document.createElement('button');
+                del.className = "key delete";
+                del.innerText = "⌫";
+                del.onclick = () => {
+                    const val = document.getElementById('write-input').value;
+                    document.getElementById('write-input').value = val.slice(0, -1);
+                    document.getElementById('write-input').focus();
+                };
+                rowDiv.appendChild(del);
+            }
+            kbContainer.appendChild(rowDiv);
+        });
+
+        // Initialize first view
+        renderCurrent();
+    </script>
+</body>
+</html>
