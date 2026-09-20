@@ -22,10 +22,15 @@
     .flashcard-back { transform: rotateY(180deg); }
   </style>
 </head>
-<body class="bg-slate-50 min-h-screen font-sans">
+<body class="bg-slate-50 min-h-screen font-sans text-slate-800">
   <div id="app" class="max-w-2xl mx-auto p-4 md:p-8 space-y-6">
     <header class="text-center space-y-3">
-      <h1 class="text-3xl font-bold text-slate-800">Ruslan Russian Trainer</h1>
+      <div class="flex justify-between items-center">
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-800">Ruslan Russian Trainer</h1>
+        <button onclick="resetCurrentModeProgress()" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 py-1.5 px-3 rounded-lg font-medium transition shadow-sm">
+          Reset Mode
+        </button>
+      </div>
       
       <!-- Lesson Selector -->
       <div class="flex justify-center items-center gap-2">
@@ -37,10 +42,14 @@
         </select>
       </div>
 
-      <div class="flex justify-between items-center px-4 mt-4">
-        <span class="text-xs font-medium text-slate-500" id="progressText">Progress: 0%</span>
-        <div class="w-48 h-2 bg-slate-200 rounded-full overflow-hidden">
-          <div id="progressBar" class="h-full bg-blue-500 transition-all duration-300" style="width: 0%"></div>
+      <!-- Mode-specific Progress Bar -->
+      <div class="space-y-1 mt-4">
+        <div class="flex justify-between items-center px-1">
+          <span class="text-xs font-semibold uppercase text-slate-500" id="progressLabel">Study Progress</span>
+          <span class="text-xs font-bold text-blue-600" id="progressText">0%</span>
+        </div>
+        <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden shadow-inner">
+          <div id="progressBar" class="h-full bg-blue-600 transition-all duration-300" style="width: 0%"></div>
         </div>
       </div>
     </header>
@@ -67,40 +76,57 @@
           </div>
         </div>
       </div>
-      <div class="flex justify-between">
-        <button onclick="prevWord()" class="px-4 py-2 border rounded bg-white hover:bg-slate-50 active:bg-slate-100">Previous</button>
-        <button onclick="nextWord()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Next Word</button>
+      <div class="flex justify-between items-center">
+        <button onclick="prevWord()" class="px-4 py-2 border rounded bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 font-medium shadow-sm">Previous</button>
+        <button onclick="resetStudyProgress()" class="text-xs text-slate-400 hover:text-slate-600 underline">Start Over</button>
+        <button onclick="nextWord()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium shadow-sm">Next Word</button>
       </div>
     </div>
 
     <!-- Quiz View -->
     <div id="view-quiz" class="hidden space-y-6">
-      <div class="bg-white p-8 rounded-xl shadow-md border border-slate-100 text-center">
-        <div id="quiz-ru" class="text-4xl font-bold text-blue-600 mb-8">Russian Word</div>
+      <div id="quiz-active-card" class="bg-white p-8 rounded-xl shadow-md border border-slate-100 text-center space-y-6">
+        <div id="quiz-ru" class="text-4xl font-bold text-blue-600">Russian Word</div>
         <div id="quiz-options" class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <!-- Options injected here -->
         </div>
-        <div id="quiz-feedback" class="mt-4 h-6 font-medium"></div>
+        <div id="quiz-feedback" class="h-6 font-medium"></div>
+      </div>
+
+      <!-- Quiz Completion Card -->
+      <div id="quiz-complete-card" class="hidden bg-white p-8 rounded-xl shadow-md border border-slate-100 text-center space-y-4">
+        <div class="text-5xl">🎉</div>
+        <h2 class="text-2xl font-bold text-slate-800">Quiz Completed!</h2>
+        <p class="text-slate-600">You have successfully answered every word in this lesson.</p>
+        <button onclick="resetQuizProgress()" class="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 shadow-md">Restart Quiz</button>
       </div>
     </div>
 
     <!-- Writing View -->
     <div id="view-writing" class="hidden space-y-6">
-      <div class="bg-white p-6 rounded-xl shadow-md border border-slate-100">
+      <div id="writing-active-card" class="bg-white p-6 rounded-xl shadow-md border border-slate-100">
         <div class="text-center mb-6">
           <div class="text-sm text-slate-400">Translate to Russian:</div>
           <div id="write-en" class="text-2xl font-bold">English Word</div>
         </div>
         <input type="text" id="write-input" class="w-full text-center text-xl h-14 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none mb-4" placeholder="Type in Cyrillic...">
         <div class="flex gap-2 mb-6">
-          <button onclick="checkWriting()" class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700">Check</button>
-          <button onclick="showHint()" class="px-6 border rounded-lg hover:bg-slate-50">Hint</button>
+          <button onclick="checkWriting()" class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 shadow-sm">Check</button>
+          <button onclick="showHint()" class="px-6 border rounded-lg hover:bg-slate-50 font-medium text-slate-600">Hint</button>
         </div>
         
         <!-- Onscreen Keyboard -->
         <div class="p-2 bg-slate-100 rounded-lg" id="kybd">
-          <!-- Rows injected here -->
+          <!-- Keyboard keys injected here -->
         </div>
+      </div>
+
+      <!-- Writing Completion Card -->
+      <div id="writing-complete-card" class="hidden bg-white p-8 rounded-xl shadow-md border border-slate-100 text-center space-y-4">
+        <div class="text-5xl">🏆</div>
+        <h2 class="text-2xl font-bold text-slate-800">Writing Mode Complete!</h2>
+        <p class="text-slate-600">You've mastered typing all vocabulary for this lesson!</p>
+        <button onclick="resetWritingProgress()" class="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 shadow-md">Restart Writing Practice</button>
       </div>
     </div>
 
@@ -211,7 +237,7 @@
     let isFlipped = false;
     let currentTab = 'study';
 
-    // Separate progress trackers for Quiz and Writing
+    // Sets to track uniquely completed Russian words in current run
     let quizCorrectSet = new Set();
     let writingCorrectSet = new Set();
 
@@ -223,31 +249,28 @@
         VOCAB = DATASETS[selected];
       }
       
-      currentIndex = 0;
-      isFlipped = false;
-      document.getElementById('flashcard').classList.remove('flipped');
-      
-      // Reset quiz and writing progress on lesson change
-      quizCorrectSet.clear();
-      writingCorrectSet.clear();
-
-      updateStudyCard();
-      setupQuiz();
-      setupWriting();
-      updateProgressBar();
+      resetStudyProgress();
+      resetQuizProgress();
+      resetWritingProgress();
     }
 
     function updateProgressBar() {
       let percent = 0;
+      let label = "Study Progress";
+
       if (currentTab === 'study') {
         percent = Math.round(((currentIndex + 1) / VOCAB.length) * 100);
+        label = "Study Progress";
       } else if (currentTab === 'quiz') {
         percent = Math.round((quizCorrectSet.size / VOCAB.length) * 100);
+        label = "Quiz Progress";
       } else if (currentTab === 'writing') {
         percent = Math.round((writingCorrectSet.size / VOCAB.length) * 100);
+        label = "Writing Progress";
       }
 
-      document.getElementById('progressText').innerText = `Progress: ${percent}%`;
+      document.getElementById('progressLabel').innerText = label;
+      document.getElementById('progressText').innerText = `${percent}%`;
       document.getElementById('progressBar').style.width = `${percent}%`;
     }
 
@@ -266,7 +289,20 @@
       updateProgressBar();
     }
 
-    // Study Logic
+    function resetCurrentModeProgress() {
+      if (currentTab === 'study') resetStudyProgress();
+      else if (currentTab === 'quiz') resetQuizProgress();
+      else if (currentTab === 'writing') resetWritingProgress();
+    }
+
+    // --- STUDY MODE ---
+    function resetStudyProgress() {
+      currentIndex = 0;
+      if (isFlipped) toggleFlip();
+      updateStudyCard();
+      updateProgressBar();
+    }
+
     function toggleFlip() {
       isFlipped = !isFlipped;
       document.getElementById('flashcard').classList.toggle('flipped', isFlipped);
@@ -310,13 +346,38 @@
       navigateCard((currentIndex - 1 + VOCAB.length) % VOCAB.length);
     }
 
-    // Quiz Logic
+    // --- QUIZ MODE ---
     let currentQuizItem = null;
+
+    function resetQuizProgress() {
+      quizCorrectSet.clear();
+      document.getElementById('quiz-complete-card').classList.add('hidden');
+      document.getElementById('quiz-active-card').classList.remove('hidden');
+      setupQuiz();
+      updateProgressBar();
+    }
+
     function setupQuiz() {
-      currentQuizItem = VOCAB[Math.floor(Math.random() * VOCAB.length)];
+      // Filter out words that have already been correctly answered
+      const remainingVocab = VOCAB.filter(item => !quizCorrectSet.has(item.ru));
+
+      if (remainingVocab.length === 0) {
+        // Quiz is 100% complete
+        document.getElementById('quiz-active-card').classList.add('hidden');
+        document.getElementById('quiz-complete-card').classList.remove('hidden');
+        updateProgressBar();
+        return;
+      }
+
+      document.getElementById('quiz-active-card').classList.remove('hidden');
+      document.getElementById('quiz-complete-card').classList.add('hidden');
+
+      // Pick a random remaining word
+      currentQuizItem = remainingVocab[Math.floor(Math.random() * remainingVocab.length)];
       document.getElementById('quiz-ru').innerText = currentQuizItem.ru;
       document.getElementById('quiz-feedback').innerText = '';
 
+      // Generate options (correct answer + 3 distractors from the full list)
       let options = [currentQuizItem.en];
       while (options.length < 4 && options.length < VOCAB.length) {
         let rand = VOCAB[Math.floor(Math.random() * VOCAB.length)].en;
@@ -328,7 +389,7 @@
       optsContainer.innerHTML = '';
       options.forEach(opt => {
         const btn = document.createElement('button');
-        btn.className = 'p-4 border rounded-lg hover:bg-slate-50 transition font-medium text-slate-700 text-left';
+        btn.className = 'p-4 border rounded-lg hover:bg-slate-50 active:bg-slate-100 transition font-medium text-slate-700 text-left shadow-sm';
         btn.innerText = opt;
         btn.onclick = () => checkQuiz(opt, btn);
         optsContainer.appendChild(btn);
@@ -337,26 +398,61 @@
 
     function checkQuiz(selected, btn) {
       const feedback = document.getElementById('quiz-feedback');
+      const allButtons = document.querySelectorAll('#quiz-options button');
+      
+      // Disable buttons temporarily while displaying feedback
+      allButtons.forEach(b => b.disabled = true);
+
       if (selected === currentQuizItem.en) {
-        btn.className = 'p-4 border rounded-lg bg-green-500 text-white font-medium text-left';
-        feedback.className = 'mt-4 h-6 font-medium text-green-600';
+        btn.className = 'p-4 border rounded-lg bg-green-500 text-white font-medium text-left shadow-sm';
+        feedback.className = 'mt-4 h-6 font-semibold text-green-600';
         feedback.innerText = 'Correct!';
         
         quizCorrectSet.add(currentQuizItem.ru);
         updateProgressBar();
 
-        setTimeout(setupQuiz, 1200);
+        setTimeout(setupQuiz, 1000);
       } else {
-        btn.className = 'p-4 border rounded-lg bg-red-500 text-white font-medium text-left';
-        feedback.className = 'mt-4 h-6 font-medium text-red-500';
+        btn.className = 'p-4 border rounded-lg bg-red-500 text-white font-medium text-left shadow-sm';
+        feedback.className = 'mt-4 h-6 font-semibold text-red-500';
         feedback.innerText = 'Try again!';
+        
+        setTimeout(() => {
+          allButtons.forEach(b => {
+            b.disabled = false;
+            if (b !== btn) b.className = 'p-4 border rounded-lg hover:bg-slate-50 active:bg-slate-100 transition font-medium text-slate-700 text-left shadow-sm';
+          });
+          btn.className = 'p-4 border rounded-lg bg-red-100 border-red-300 text-red-700 font-medium text-left shadow-sm';
+          feedback.innerText = '';
+        }, 1200);
       }
     }
 
-    // Writing Logic
+    // --- WRITING MODE ---
     let currentWriteItem = null;
+
+    function resetWritingProgress() {
+      writingCorrectSet.clear();
+      document.getElementById('writing-complete-card').classList.add('hidden');
+      document.getElementById('writing-active-card').classList.remove('hidden');
+      setupWriting();
+      updateProgressBar();
+    }
+
     function setupWriting() {
-      currentWriteItem = VOCAB[Math.floor(Math.random() * VOCAB.length)];
+      const remainingVocab = VOCAB.filter(item => !writingCorrectSet.has(item.ru));
+
+      if (remainingVocab.length === 0) {
+        document.getElementById('writing-active-card').classList.add('hidden');
+        document.getElementById('writing-complete-card').classList.remove('hidden');
+        updateProgressBar();
+        return;
+      }
+
+      document.getElementById('writing-active-card').classList.remove('hidden');
+      document.getElementById('writing-complete-card').classList.add('hidden');
+
+      currentWriteItem = remainingVocab[Math.floor(Math.random() * remainingVocab.length)];
       document.getElementById('write-en').innerText = currentWriteItem.en;
       const input = document.getElementById('write-input');
       input.value = '';
@@ -374,7 +470,7 @@
         writingCorrectSet.add(currentWriteItem.ru);
         updateProgressBar();
 
-        setTimeout(setupWriting, 1000);
+        setTimeout(setupWriting, 800);
       } else {
         input.className = 'w-full text-center text-xl h-14 border-2 border-red-500 bg-red-50 rounded-lg outline-none mb-4';
       }
@@ -400,7 +496,7 @@
         rowDiv.className = 'flex justify-center gap-1 mb-1';
         row.forEach(key => {
           const btn = document.createElement('button');
-          btn.className = 'bg-white shadow px-2.5 py-2 rounded text-sm font-semibold active:bg-slate-200 flex-1 max-w-[40px]';
+          btn.className = 'bg-white shadow px-2.5 py-2 rounded text-sm font-semibold active:bg-slate-200 flex-1 max-w-[40px] border border-slate-200';
           btn.innerText = key;
           btn.onclick = () => {
             const input = document.getElementById('write-input');
@@ -416,7 +512,6 @@
       });
     }
 
-    // Initialize
     renderKeyboard();
     changeLesson();
   </script>
