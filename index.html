@@ -481,11 +481,12 @@
       input.value = currentWriteItem.ru.substring(0, Math.max(1, input.value.length + 1));
     }
 
-    // On-screen Russian Keyboard
+    // On-screen Russian Keyboard (Updated with Space Bar)
     const KEYBOARD_ROWS = [
       ['й','ц','у','к','е','н','г','ш','щ','з','х','ъ'],
       ['ф','ы','в','а','п','р','о','л','д','ж','э'],
-      ['я','ч','с','м','и','т','ь','б','ю','<-']
+      ['я','ч','с','м','и','т','ь','б','ю','<-'],
+      ['SPACE']
     ];
 
     function renderKeyboard() {
